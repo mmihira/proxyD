@@ -7,13 +7,25 @@ import threading
 
 GPIO.setmode(GPIO.BOARD)
 
+# The proximity detector is installed
+# on port 12
 pir = 12
+
 GPIO.setup(pir,GPIO.IN)
 
 print "Waiting for sensor to settle"
 time.sleep(2)
 print "Detecting Motion"
 
+"""
+logWriter is a asychronous file writer
+which logs all detected movement to a 
+text file
+
+A thread.lock object is passed in as
+argument which each thread that references
+this writer will acquire before writing
+"""
 class logWriter:
 
     def __init__(self,_lock):
@@ -52,15 +64,13 @@ log =  logWriter(writeLock)
 # The main function
 cObj = CallBack(log)
 
-time.sleep(0.5)
-
 runProgram = 1
-
 while runProgram :
 
 	try:
 		GPIO.add_event_detect(12,GPIO.RISING,callback = cObj.callback)
 		print "Edge detection added successfully"
+
 		while 1:
 			time.sleep(100)
 		
@@ -68,7 +78,9 @@ while runProgram :
 		print "Exiting"
 		GPIO.cleanup()
 		runProgram = 0
+
 	except RuntimeError, e:
+
 		if e.message == 'Failed to add edge detection' :
 			print e.message
 			print "Retrying"
