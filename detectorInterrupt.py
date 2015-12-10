@@ -39,6 +39,10 @@ class CallBack:
  		print str(self.count) + " Motion Detected"
                 self.log.writeLnToLog(time.strftime('%Y-%m-%d %H:%M:%S') + ' - Detected - Count : ' + str(self.count))
 
+# Need to use global variables because add_event_detect doesn't work well
+# with object methods as callbacks
+count = 0
+
 # The main write lock
 writeLock = thread.allocate_lock()
 
@@ -50,15 +54,32 @@ cObj = CallBack(log)
 
 time.sleep(0.5)
 
+runProgram = 1
 
-try:
-	GPIO.add_event_detect(12,GPIO.RISING,callback = cObj.callback)
-	while 1:
-		time.sleep(100)
-	
-except KeyboardInterrupt:
-	print "Exiting"
-	GPIO.cleanup()
+while runProgram :
+
+	try:
+		GPIO.add_event_detect(12,GPIO.RISING,callback = cObj.callback)
+		print "Edge detection added successfully"
+		while 1:
+			time.sleep(100)
+		
+	except KeyboardInterrupt:
+		print "Exiting"
+		GPIO.cleanup()
+		runProgram = 0
+	except RuntimeError, e:
+		if e.message == 'Failed to add edge detection' :
+			print e.message
+			print "Retrying"
+		else:
+			print 'Exiting for unknown error : ' + e.message
+			GPIO.cleanup()
+			runProgram = 0
+
+
+
+
 
 
 
