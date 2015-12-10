@@ -21,7 +21,7 @@ class logWriter:
         self.log.write('-- Starting log\n')
         self.lock = _lock
 
-    def writeLnToLog(msg):
+    def writeLnToLog(self, msg):
         self.lock.acquire()
         self.log.write(msg + '\n')
         self.log.flush()
@@ -47,6 +47,8 @@ log =  logWriter(writeLock)
 
 # The main function
 cObj = CallBack(log)
+
+time.sleep(0.5)
 
 
 try:
