@@ -4,9 +4,8 @@ import RPi.GPIO as GPIO
 import time
 import thread
 import threading
-
-
-
+import subprocess
+from os.path import expanduser,join,splitext
 
 GPIO.setmode(GPIO.BOARD)
 
@@ -14,59 +13,35 @@ GPIO.setmode(GPIO.BOARD)
 # on port 12
 pir = 12
 
-import sys
-import subprocess
-from os.path import expanduser,join,splitext
-from os import walk
-
-
-root = "~/c/jstats/"
-root = expanduser(root)
-
-# Class path
-classpath = root + "src/"
-
-# Compile path
-compileTo = root + "bin"
-
-# Run path
-runpath = root + "bin/"
-
-# Doc path
-docpath = root + "doc/"
-
-if len(sys.argv) < 2:
-    print("At least one argument is requried.Argument must be  -c, -r, or -doc") 
-elif sys.argv[1] != "-c" and sys.argv[1] != "-r" and sys.argv[1] != "-doc":
-    print("Argument must be  -c, -r, or -doc")
-elif sys.argv[1] == "-c" :
-    print("Compiling jstats")
-    subprocess.call(["javac", "-cp", classpath, "-Xlint:deprecation","-d",compileTo, "src/jstats/Jstats.java"], shell=False)
-elif sys.argv[1] == "-r":
-    print("Running jstats")
-    subprocess.call(["java", "-cp",runpath,"jstats.Jstats"],shell=False)
-elif sys.argv[1] == "-doc":
-    print("Creating doc")
-    files = []
-    for dirpath, dirnames, filenames in walk(classpath):
-        for i in filenames:
-            name,ext = splitext(i)
-            if ext == ".java":
-                files.append(join(dirpath,i))
-    cargs = ["javadoc","-private","-cp",classpath,"-d",docpath]
-    for i in files:
-        cargs.append(i)
-    subprocess.call(cargs,shell=False)
 GPIO.setup(pir,GPIO.IN)
 
 print "Waiting for sensor to settle"
 time.sleep(2)
 print "Detecting Motion"
 
+
+class GitPush:
+
+    def __init__(self):
+
+        self.root = "~/proxyData/"
+        self.root = expanduser(self.root)
+
+
+    def push(self):
+
+       subprocess.call(['git','-C', self.root ,'add','--all'],shell=False)
+       subprocess.call(['git','-C', self.root ,'commit','-m',time.strftime('%Y-%m-%d %H:%M:%S')],shell=False)
+       subprocess.call(['git','-C', self.root ,'push','origin','master'],shell=False)
+
+
+
+
 """
 logWriter is a asychronous file writer
 which logs all detected movement to a 
-text file
+text file. Also it will push these changes
+to a specified remote directory
 
 A thread.lock object is passed in as
 argument which each thread that references
@@ -75,14 +50,16 @@ this writer will acquire before writing
 class logWriter:
 
     def __init__(self,_lock):
-        self.log = open('log.txt','w')
+        self.log = open('/home/pi/proxyData/data.txt','w')
         self.log.write('-- Starting log\n')
         self.lock = _lock
+	self.gitWriter = GitPush()
 
     def writeLnToLog(self, msg):
         self.lock.acquire()
         self.log.write(msg + '\n')
         self.log.flush()
+	self.gitWriter.push()
         self.lock.release()
 
 
@@ -95,7 +72,7 @@ class CallBack:
 	def callback(self,pir):
  		self.count += 1
  		print str(self.count) + " Motion Detected"
-                self.log.writeLnToLog(time.strftime('%Y-%m-%d %H:%M:%S') + ' - Detected - Count : ' + str(self.count))
+                self.log.writeLnToLog(time.strftime('%Y-%m-%d %H:%M:%S') + ', - Detected - Count : ,' + str(self.count))
 
 # Need to use global variables because add_event_detect doesn't work well
 # with object methods as callbacks
