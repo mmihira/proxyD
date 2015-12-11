@@ -5,12 +5,58 @@ import time
 import thread
 import threading
 
+
+
+
 GPIO.setmode(GPIO.BOARD)
 
 # The proximity detector is installed
 # on port 12
 pir = 12
 
+import sys
+import subprocess
+from os.path import expanduser,join,splitext
+from os import walk
+
+
+root = "~/c/jstats/"
+root = expanduser(root)
+
+# Class path
+classpath = root + "src/"
+
+# Compile path
+compileTo = root + "bin"
+
+# Run path
+runpath = root + "bin/"
+
+# Doc path
+docpath = root + "doc/"
+
+if len(sys.argv) < 2:
+    print("At least one argument is requried.Argument must be  -c, -r, or -doc") 
+elif sys.argv[1] != "-c" and sys.argv[1] != "-r" and sys.argv[1] != "-doc":
+    print("Argument must be  -c, -r, or -doc")
+elif sys.argv[1] == "-c" :
+    print("Compiling jstats")
+    subprocess.call(["javac", "-cp", classpath, "-Xlint:deprecation","-d",compileTo, "src/jstats/Jstats.java"], shell=False)
+elif sys.argv[1] == "-r":
+    print("Running jstats")
+    subprocess.call(["java", "-cp",runpath,"jstats.Jstats"],shell=False)
+elif sys.argv[1] == "-doc":
+    print("Creating doc")
+    files = []
+    for dirpath, dirnames, filenames in walk(classpath):
+        for i in filenames:
+            name,ext = splitext(i)
+            if ext == ".java":
+                files.append(join(dirpath,i))
+    cargs = ["javadoc","-private","-cp",classpath,"-d",docpath]
+    for i in files:
+        cargs.append(i)
+    subprocess.call(cargs,shell=False)
 GPIO.setup(pir,GPIO.IN)
 
 print "Waiting for sensor to settle"
